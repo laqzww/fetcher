@@ -5,14 +5,14 @@ const fs = require('fs');
 const path = require('path');
 
 // Initialize database
-const { init: initDb, db: sqliteDb } = require('../db/sqlite');
+const sqlite = require('../db/sqlite');
 
 console.log('[COMBINED-CRON] Starting combined cron job...');
 console.log('[COMBINED-CRON] Current time:', new Date().toISOString());
 
 // Initialize database
 try {
-    initDb();
+    sqlite.init();
     console.log('[COMBINED-CRON] Database initialized');
 } catch (e) {
     console.error('[COMBINED-CRON] Database init failed:', e);
@@ -50,7 +50,7 @@ async function refreshHearings() {
         console.log(`[COMBINED-CRON] Found ${collected.length} hearings in total`);
         
         // Update database
-        if (sqliteDb && sqliteDb.prepare) {
+        if (sqlite.db && sqlite.db.prepare) {
             for (const h of collected) {
                 try {
                     sqliteDb.prepare('INSERT OR REPLACE INTO hearings(id, title, start_date, deadline, status, updated_at) VALUES (?,?,?,?,?,?)').run(
