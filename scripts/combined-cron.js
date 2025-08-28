@@ -63,13 +63,16 @@ async function refreshHearings() {
         }
         
         // Refresh pending hearings
-        const pendingHearings = sqlite.db.prepare(`
-            SELECT id FROM hearings 
-            WHERE archived IS NOT 1 
-            AND LOWER(status) LIKE '%afventer konklusion%'
-            ORDER BY updated_at ASC
-            LIMIT 20
-        `).all();
+        let pendingHearings = [];
+        if (sqlite.db && sqlite.db.prepare) {
+            pendingHearings = sqlite.db.prepare(`
+                SELECT id FROM hearings 
+                WHERE archived IS NOT 1 
+                AND LOWER(status) LIKE '%afventer konklusion%'
+                ORDER BY updated_at ASC
+                LIMIT 20
+            `).all();
+        }
         
         console.log(`[COMBINED-CRON] Found ${pendingHearings.length} pending hearings to refresh`);
         
