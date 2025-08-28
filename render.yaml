@@ -129,5 +129,3 @@ jobs:
         value: "https://blivhort-ai.onrender.com"
       - key: PYTHONPATH
         value: "/opt/render/project/src/fetcher/python_packages:/opt/render/project/src/python_packages"
-      - key: OPENAI_API_KEY
-        sync: false
