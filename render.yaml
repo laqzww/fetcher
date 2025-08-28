@@ -105,9 +105,9 @@ services:
 
 jobs:
   - type: cron
-    name: blivhort-ai-combined-cron
+    name: blivhort-ai-daily-cron
     env: node
-    schedule: "*/30 * * * *"  # Runs every 30 minutes
+    schedule: "0 4 * * *"  # Runs daily at 4:00 AM UTC
     buildCommand: |
       set -e
       export PYTHONPATH="$PWD/python_packages"

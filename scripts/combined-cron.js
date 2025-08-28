@@ -21,14 +21,9 @@ try {
 
 const PUBLIC_URL = process.env.PUBLIC_URL || 'https://blivhort-ai.onrender.com';
 
-// Check if we should run daily scrape (at 3 AM)
+// Always run both tasks since we only run once daily
 function shouldRunDailyScrape() {
-    const now = new Date();
-    const hours = now.getUTCHours();
-    const minutes = now.getUTCMinutes();
-    
-    // Run daily scrape if it's between 3:00 and 3:30 AM UTC
-    return hours === 3 && minutes < 30;
+    return true; // Always run daily scrape since this job only runs once per day
 }
 
 // Hearing refresh function (runs every time)
@@ -129,13 +124,9 @@ async function main() {
         // Always run hearing refresh
         await refreshHearings();
         
-        // Check if we should also run daily scrape
-        if (shouldRunDailyScrape()) {
-            console.log('[COMBINED-CRON] Running daily scrape (3 AM window)...');
-            await runDailyScrape();
-        } else {
-            console.log('[COMBINED-CRON] Skipping daily scrape (not in 3 AM window)');
-        }
+        // Always run daily scrape since we only run once per day
+        console.log('[COMBINED-CRON] Running daily scrape...');
+        await runDailyScrape();
         
         console.log('[COMBINED-CRON] All tasks completed successfully');
         process.exit(0);
