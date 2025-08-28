@@ -1216,7 +1216,8 @@ function computeIsOpen(statusText, deadline) {
     return false;
 }
 
-function isAwaitingConclusion(status) {
+function shouldIncludeInIndex(status) {
+    // Only include hearings with status "Afventer konklusion" in the search index
     return status && status.toLowerCase().includes('afventer konklusion');
 }
 
@@ -1306,13 +1307,13 @@ async function warmHearingIndex() {
             if (page >= totalPages) break;
             page += 1;
         }
-        // Filter out hearings with status "Afventer konklusion"
+        // Only include hearings with status "Afventer konklusion"
         hearingIndex = collected
-            .filter(h => !isAwaitingConclusion(h.status))
+            .filter(h => shouldIncludeInIndex(h.status))
             .map(enrichHearingForIndex);
         try {
             if (sqliteDb && sqliteDb.prepare) {
-                // Still save all hearings to DB, but only non-awaiting ones to index
+                // Still save all hearings to DB, but only "Afventer konklusion" ones to index
                 for (const h of collected) {
                     try { upsertHearing({ id: h.id, title: h.title || `Høring ${h.id}`, startDate: h.startDate || null, deadline: h.deadline || null, status: h.status || null }); } catch {}
                 }
@@ -1745,9 +1746,9 @@ app.get('/api/hearing-index', async (req, res) => {
                     let rows;
                     if (statusLike) {
                         rows = sqlite.db.prepare(`SELECT id,title,start_date as startDate,deadline,status FROM hearings WHERE archived IS NOT 1 AND LOWER(status) LIKE '%' || ? || '%'`).all(statusLike);
-                    } else {
-                        rows = sqlite.db.prepare(`SELECT id,title,start_date as startDate,deadline,status FROM hearings WHERE archived IS NOT 1 AND LOWER(status) NOT LIKE '%afventer konklusion%'`).all();
-                    }
+                                    } else {
+                    rows = sqlite.db.prepare(`SELECT id,title,start_date as startDate,deadline,status FROM hearings WHERE archived IS NOT 1 AND LOWER(status) LIKE '%afventer konklusion%'`).all();
+                }
                     hearingIndex = (rows || []).map(enrichHearingForIndex);
                 }
             }
@@ -1803,9 +1804,9 @@ app.get('/api/hearing-index', async (req, res) => {
                     let rows;
                     if (statusLike) {
                         rows = sqlite.db.prepare(`SELECT id,title,start_date as startDate,deadline,status FROM hearings WHERE archived IS NOT 1 AND LOWER(status) LIKE '%' || ? || '%'`).all(statusLike);
-                    } else {
-                        rows = sqlite.db.prepare(`SELECT id,title,start_date as startDate,deadline,status FROM hearings WHERE archived IS NOT 1 AND LOWER(status) NOT LIKE '%afventer konklusion%'`).all();
-                    }
+                                    } else {
+                    rows = sqlite.db.prepare(`SELECT id,title,start_date as startDate,deadline,status FROM hearings WHERE archived IS NOT 1 AND LOWER(status) LIKE '%afventer konklusion%'`).all();
+                }
                     hearingIndex = (rows || []).map(enrichHearingForIndex);
                 }
             } catch (_) {}
@@ -5317,7 +5318,7 @@ server.listen(PORT, () => {
                         
                         // First, warm the hearing index - this will:
                         // 1. Fetch all hearings from API
-                        // 2. Filter out ones with status "Afventer konklusion"
+                        // 2. Only include ones with status "Afventer konklusion"
                         // 3. Update hearing_index table in SQLite with proper titles
                         await warmHearingIndex();
                         
