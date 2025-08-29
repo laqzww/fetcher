@@ -2555,6 +2555,7 @@ function extractMetaFromNextJson(jsonRoot) {
             
             // Fallback: look for any content field that looks like a title
             if (!title) {
+                // First try: Look for short text content that might be a title
                 for (const content of contents) {
                     if (content?.attributes?.textContent) {
                         const text = String(content.attributes.textContent).trim();
@@ -2562,6 +2563,21 @@ function extractMetaFromNextJson(jsonRoot) {
                         if (text.length > 0 && text.length < 200 && !text.includes('\n\n')) {
                             title = fixEncoding(text);
                             break;
+                        }
+                    }
+                }
+                
+                // Second try: If still no title, look for the first non-empty text content
+                if (!title) {
+                    for (const content of contents) {
+                        if (content?.attributes?.textContent) {
+                            const text = String(content.attributes.textContent).trim();
+                            if (text.length > 0) {
+                                // Take first line or first 100 chars as title
+                                const firstLine = text.split('\n')[0].trim();
+                                title = fixEncoding(firstLine.length > 100 ? firstLine.substring(0, 100) + '...' : firstLine);
+                                break;
+                            }
                         }
                     }
                 }
@@ -5360,8 +5376,15 @@ server.listen(PORT, () => {
                             try {
                                 // Skip if already complete (static dataset)
                                 try { const comp = isHearingComplete(id); if (comp && comp.complete) continue; } catch {}
-                                await hydrateHearingDirect(id);
-                            } catch {}
+                                const result = await hydrateHearingDirect(id);
+                                if (!result.success) {
+                                    console.log(`[CRON] Failed to hydrate hearing ${id}: ${result.error || 'Unknown error'}`);
+                                } else if (result.materials === 0 && result.responses === 0) {
+                                    console.log(`[CRON] Hearing ${id} appears to be empty or in fallback state`);
+                                }
+                            } catch (e) {
+                                console.error(`[CRON] Error processing hearing ${id}:`, e.message);
+                            }
                         }
                     });
                     await Promise.all(workers);
@@ -5418,8 +5441,15 @@ server.listen(PORT, () => {
                                     try {
                                         // Skip if already complete (static dataset)
                                         try { const comp = isHearingComplete(id); if (comp && comp.complete) continue; } catch {}
-                                        await hydrateHearingDirect(id);
-                                    } catch {}
+                                        const result = await hydrateHearingDirect(id);
+                                        if (!result.success) {
+                                            console.log(`[DailyScrape] Failed to hydrate hearing ${id}: ${result.error || 'Unknown error'}`);
+                                        } else if (result.materials === 0 && result.responses === 0) {
+                                            console.log(`[DailyScrape] Hearing ${id} appears to be empty or in fallback state`);
+                                        }
+                                    } catch (e) {
+                                        console.error(`[DailyScrape] Error processing hearing ${id}:`, e.message);
+                                    }
                                 }
                             });
                             await Promise.all(workers);
@@ -5624,6 +5654,11 @@ async function hydrateHearingDirect(hearingId) {
                         startDate: hearingMeta.startDate || attrs.startDate || null,
                         status: hearingMeta.status || statusIncluded?.attributes?.name || null
                     };
+                    
+                    // Log if this hearing has no content
+                    if (contents.length === 0) {
+                        console.log(`[HydrateHearing] Hearing ${hearingId} has no content items - may be incomplete or in fallback state`);
+                    }
                 }
             } catch {}
         }
